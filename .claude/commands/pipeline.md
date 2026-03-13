@@ -154,15 +154,8 @@ Print the breakdown for the user's awareness — then **immediately proceed** to
 - Dependencies
 - Which stories can run in parallel
 
-### 6. Trigger Dev Agents
+### 6. Removed - do NOT Trigger Dev Agents
 
-Apply `agent:ready` to all stories with no unresolved dependencies:
-
-```bash
-gh issue edit <number> --add-label "agent:ready"
-```
-
-For stories with dependencies: do NOT apply `agent:ready` now. The monitoring loop (Step 8) will apply it automatically when their blockers are merged.
 
 ### 7. Summary
 
