@@ -1,0 +1,113 @@
+name: Claude Auto-Fix
+
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  claude-fix:
+    # Only run on bot review comments (not human ones)
+    if: >
+      (github.event_name == 'pull_request_review' &&
+       github.event.review.user.type == 'Bot') ||
+      (github.event_name == 'pull_request_review_comment' &&
+       github.event.comment.user.type == 'Bot')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    timeout-minutes: 20
+    concurrency:
+      group: autofix-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Check autofix iteration count
+        id: iteration
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FIXES=$(gh pr view ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --json commits \
+            --jq '[.commits[].messageHeadline | select(test("\\[autofix"))] | length')
+          echo "count=$FIXES" >> $GITHUB_OUTPUT
+          if [ "$FIXES" -ge 5 ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "::warning::Autofix iteration limit reached (5/5). Skipping."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment if iteration limit reached
+        if: steps.iteration.outputs.skip == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body "Auto-fix has reached its iteration limit (5/5). A human needs to review the remaining feedback and intervene manually."
+
+      - name: Checkout
+        if: steps.iteration.outputs.skip != 'true'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        if: steps.iteration.outputs.skip != 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.iteration.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Run Claude Code Auto-Fix
+        if: steps.iteration.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@22891970a71915a0bff651b093e5be2b99f336ba # v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: "--max-turns 15"
+          prompt: |
+            A code review bot has posted feedback on this PR (#${{ github.event.pull_request.number }}).
+
+            Read ALL review comments using `gh pr view ${{ github.event.pull_request.number }} --comments` and `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews`.
+
+            Fix every issue raised in the review.
+
+            ## Rules
+
+            - Read CLAUDE.md for project conventions before making changes
+            - Match the project's existing code patterns, naming, and style
+            - Reuse existing utilities and components (search the codebase before creating anything new)
+            - Run `npm test`, `npx tsc --noEmit`, `npm run lint` after fixes
+            - Commit: "fix: address review feedback [autofix ${{ steps.iteration.outputs.count }}/5]"
+            - If tests fail, debug and fix until they pass
+            - Push changes to the PR branch
+            - Do not introduce tech debt while fixing (no TODO/FIXME, no copy-paste)
+
+            ## What NOT to fix
+
+            - Style-only nits (formatting, naming preferences)
+            - Purely cosmetic suggestions
+
+            Focus on: correctness, security, architecture, code reuse, and test failures.
+          settings: |
+            {
+              "permissions": {
+                "allow": [
+                  "Bash(npm:*)", "Bash(npx:*)", "Bash(node:*)",
+                  "Bash(git add:*)", "Bash(git commit:*)", "Bash(git push:*)",
+                  "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
+                  "Bash(gh pr:*)", "Bash(gh api:*)",
+                  "Edit", "MultiEdit", "Read", "Write", "Glob", "Grep"
+                ]
+              }
+            }

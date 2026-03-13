@@ -1,0 +1,116 @@
+name: Claude Dev Agent
+
+on:
+  issues:
+    types: [assigned, labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-dev:
+    # Run when:
+    #   1. Issue is assigned (manual trigger)
+    #   2. Issue gets 'agent:ready' label (pipeline or manual)
+    #   3. Someone comments @claude on an issue
+    if: >
+      (github.event_name == 'issues' && github.event.action == 'assigned') ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' &&
+       github.event.label.name == 'agent:ready') ||
+      (github.event_name == 'issue_comment' &&
+       contains(github.event.comment.body, '@claude') &&
+       !github.event.issue.pull_request)
+    runs-on: ubuntu-latest
+    concurrency:
+      group: dev-agent-${{ github.event.issue.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        if: hashFiles('package-lock.json', 'yarn.lock') != ''
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        if: hashFiles('package-lock.json') != ''
+        run: npm ci
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@22891970a71915a0bff651b093e5be2b99f336ba # v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          trigger_phrase: "@claude"
+          label_trigger: "agent:ready"
+          assignee_trigger: "claude"
+          # TODO: Adjust --max-turns and --allowedTools for your project
+          claude_args: '--max-turns 40 --allowedTools "Edit,Write,Read,MultiEdit,Glob,Grep,Bash(npm:*),Bash(npx:*),Bash(node:*),Bash(tsc:*),Bash(mkdir:*),Bash(ls:*),Bash(cat:*),Bash(cp:*),Bash(mv:*),Bash(chmod:*),Bash(git:*),Bash(gh:*)"'
+          prompt: |
+            You are a dev agent working on a GitHub issue. Read the issue carefully and implement the requested changes.
+
+            ## Workflow
+
+            1. **Explore the codebase**: Before writing any code, understand the project you are working in.
+               - Read `package.json` to identify the tech stack, framework, and key dependencies.
+               - Read the top-level directory structure (`ls -la`, then key subdirectories).
+               - Read CLAUDE.md for project rules, architecture, and conventions.
+               - Read 2-3 existing files in the directories you will be modifying to understand naming conventions, import style, error handling patterns, and how similar features are implemented.
+               - Search for existing utilities, helpers, or components you should reuse (use Grep/Glob).
+            2. **Understand the issue**: Read the issue title and body. Identify requirements, acceptance criteria, affected files, and test requirements.
+            3. **Implement**: Write the code changes. Your code must match the project's existing patterns, naming conventions, and code style. Reuse existing modules and components instead of creating new ones. Do not introduce tech debt (no TODO/FIXME, no copy-paste, no pattern violations).
+            4. **Verify**: Run all verification steps:
+               - `npm test` (tests pass)
+               - `npx tsc --noEmit` (types clean)
+               - `npm run lint` (lint clean)
+               - `npm run build` (build succeeds)
+               If any check fails, fix the issue. If it cannot be fixed after 2 attempts, stop and report in a PR comment.
+            5. **Commit**: Stage your changes and commit with a descriptive message in imperative mood.
+            6. **Create PR**: Push your branch and create a pull request:
+               ```
+               gh pr create --title "<short title>" --body "Closes #${{ github.event.issue.number }}
+
+               ## Summary
+               <what changed and why>
+
+               ## Completed
+               - [x] <requirement 1>
+               - [x] <requirement 2>
+               - [ ] <anything not completed - explain why>
+
+               ## Test plan
+               <how this was tested>"
+               ```
+
+            ## Progress Tracking (CRITICAL)
+
+            You MUST keep GitHub updated as you work:
+
+            **GitHub Issue checkboxes**: Update in real time as you complete each item - not in a batch at the end.
+            Run `gh issue view ${{ github.event.issue.number }} --json body -q .body` to get the current body, check off items (`- [ ]` to `- [x]`), then update with `gh issue edit ${{ github.event.issue.number }} --body "<full updated body>"`.
+            Aim for 3-5 progress updates over the course of the run.
+
+            **PR task list**: After creating the PR, include a checklist in the PR body showing completed and remaining items. Update it before pushing final changes.
+
+            ## Rules
+
+            - Explore the codebase BEFORE implementing. Match existing patterns, naming, and style.
+            - Reuse existing utilities and components. Search before creating anything new.
+            - Follow project rules in CLAUDE.md
+            - Use GitHub issue number #${{ github.event.issue.number }} in the PR body for auto-close
+            - Use the Write tool to create new files (auto-creates directories)
+            - Update issue checkboxes incrementally as you work
+            - Do not introduce tech debt or leave TODO/FIXME comments
+
+            ## Context
+
+            GitHub issue: #${{ github.event.issue.number }}

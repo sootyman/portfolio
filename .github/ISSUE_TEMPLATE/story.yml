@@ -1,0 +1,80 @@
+name: Story
+description: An implementable story for autonomous dev agents
+labels: ["story"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why this change is needed
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: What needs to be done (use checkboxes)
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How to verify the work is complete (use checkboxes)
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected-files
+    attributes:
+      label: Affected Files
+      description: Files likely to be created or modified
+      placeholder: |
+        - `src/example.ts`
+    validations:
+      required: false
+
+  - type: textarea
+    id: test-requirements
+    attributes:
+      label: Test Requirements
+      description: What tests need to be written or updated
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 - Critical
+        - P1 - High
+        - P2 - Medium
+    validations:
+      required: true
+
+  # TODO: Add project-specific critical path checkboxes. Example:
+  # - type: checkboxes
+  #   id: critical-path
+  #   attributes:
+  #     label: Critical Path
+  #     description: Check if this story touches critical paths requiring human review
+  #     options:
+  #       - label: Touches authentication code
+  #       - label: Touches database layer
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Dependencies, gotchas, relevant patterns, links to related issues
+    validations:
+      required: false
