@@ -7,61 +7,56 @@
 
 ## Project Overview
 
-<!-- What this project does in 1-2 sentences. Tech stack. Deployment target. -->
-<!-- Example: "SaaS platform for X (Next.js 15, TypeScript, PostgreSQL). Deployed on Vercel." -->
+Self-hosted investment portfolio dashboard (Next.js 15, TypeScript, SQLite/Prisma, Recharts). Deployed via Docker Compose on a local home server (miniPC). Two pages: portfolio holdings management and performance dashboard. See [docs/architecture.md](docs/architecture.md) for full tech stack rationale.
 
 ## Critical Policies
 
-<!-- Non-negotiable rules. Use BOLD for constraints that, if violated, cause real damage.
-     These should also be enforced by hooks in .claude/settings.json, but state them here
-     so agents understand WHY the hooks exist. -->
-
-<!-- Examples:
-- **Every database query MUST include tenant scoping (org_id filter). Violation = data breach.**
-- **Never use mock data. This is production. Only real API responses.**
-- **Never commit secrets. Use environment variables.**
--->
+- **Never commit secrets.** API keys, credentials, and `.env` files must not be committed. Use environment variables.
+- **No external data persistence.** All data must stay in the local SQLite database. No cloud sync, no external storage.
+- **Single-user only.** No multi-tenancy. Do not add user/tenant scoping — it is not needed and adds complexity.
 
 ## Architecture
 
-<!-- Directory layout (just the key directories, not every file).
-     Import conventions (aliases, module boundaries).
-     Key dependencies agents need to know about. -->
+```
+app/                 # Next.js App Router
+  api/               # API routes (REST)
+    holdings/        # Portfolio holdings CRUD
+    prices/          # Market price fetch/cache
+  dashboard/         # Dashboard page
+  portfolio/         # Holdings management page
+  layout.tsx         # Root layout
+components/          # Shared React components
+lib/                 # Utilities (Prisma client, validation, helpers)
+prisma/
+  schema.prisma      # Database schema
+public/              # Static assets
+docker-compose.yml   # Local deployment
+Dockerfile           # App container
+```
 
-<!-- Example:
-```
-src/
-  app/       # Next.js App Router pages + API routes
-  lib/       # Core business logic
-  components/# React components
-  types/     # TypeScript types
-```
-- Import alias: `@/` maps to `src/`
-- API responses: use `apiSuccess(data)`, `apiError(msg)` from `@/utils/api-response`
--->
+- Import alias: `@/` maps to the project root
+- Database access: use the Prisma client from `@/lib/prisma`
+- Validation: use Zod schemas; define them alongside the code that uses them
+- Charts: Recharts components only — do not introduce a second charting library
 
 ## Commands
 
-<!-- Build, test, lint, dev server. Only include commands agents can't guess. -->
-
 ```bash
-# npm run dev          # Dev server
-# npm run build        # Production build
-# npm run lint         # Linter
-# npm test             # Full test suite
-# npx tsc --noEmit     # Type check
+npm run dev               # Dev server (http://localhost:3000)
+npm run build             # Production build
+npm run lint              # ESLint
+npm test                  # Full test suite
+npx tsc --noEmit          # Type check
+npx prisma migrate dev    # Apply DB migrations
+npx prisma studio         # DB browser UI
+docker compose up -d      # Start production stack
 ```
 
 ## Testing
 
-<!-- Test framework, how to run tests, coverage requirements.
-     Be specific: agents need to know exactly what to run before opening a PR. -->
-
-<!-- Example:
-- Framework: Jest (unit/integration), Playwright (UI)
-- New features require tests. Never reduce coverage unless deleting the code under test.
-- Run `npm test` before every PR.
--->
+- Framework: Jest (unit/integration) — to be configured when the first features land
+- New API routes require at least a happy-path and an error-path test
+- Run `npm test` before every PR
 
 ## Codebase Discovery (Required Before Writing Code)
 
