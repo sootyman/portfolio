@@ -63,14 +63,21 @@ src/
 - Run `npm test` before every PR.
 -->
 
+## Planning
+
+**Check ADRS first**: Before significant changes, review the `docs/adr` directory for existing architecture decisions.
+
+**Create ADRs for new decisions**: If a significant change is required that is not covered by existing ADRs, create a new ADR in the `docs/adr` directory.
+
 ## Codebase Discovery (Required Before Writing Code)
 
 Before implementing ANY feature or fix, agents MUST explore the existing codebase:
 
 1. **Understand the project**: Read `package.json` to identify the tech stack, framework, and key dependencies. Read the top-level directory structure to understand how the project is organized.
-2. **Study the target area**: Read 2-3 existing files in the directories you will be modifying. Note naming conventions (camelCase vs kebab-case, file naming patterns), import style, error handling patterns, and how similar features are already implemented.
-3. **Find reusable code**: Before creating any new utility, helper, component, or abstraction, search the codebase for existing ones. Use Grep and Glob to look for similar functionality. Reuse what exists rather than duplicating.
-4. **Match the project's patterns**: Your code must look like it was written by the same team. Match the existing code style, naming conventions, module structure, and architectural patterns. If the project uses a specific pattern (e.g., service layers, repository pattern, API response helpers), follow it.
+2. **Understand any existing ADRs**: Scan the `docs/adr` directory, review any ADRs that may be relevant to the task at hand. If a significant change is required that is not covered by existing ADRs, create a new ADR in the `docs/adr` directory.
+3. **Study the target area**: Read 2-3 existing files in the directories you will be modifying. Note naming conventions (camelCase vs kebab-case, file naming patterns), import style, error handling patterns, and how similar features are already implemented.
+4. **Find reusable code**: Before creating any new utility, helper, component, or abstraction, search the codebase for existing ones. Use Grep and Glob to look for similar functionality. Reuse what exists rather than duplicating.
+5. **Match the project's patterns**: Your code must look like it was written by the same team. Match the existing code style, naming conventions, module structure, and architectural patterns. If the project uses a specific pattern (e.g., service layers, repository pattern, API response helpers), follow it.
 
 This applies to all agents: dev, review, and fix. The review agent should verify that PRs follow these principles.
 
