@@ -1,22 +1,29 @@
-# ADR-000: [Title]
+# ADR-NNN: [Title]
 
 ## Context
 
-[Context description]
+Context description
 
-## Decision
+## Option A - Summary
 
-[Decision description]
+Decision description
 
-## Alternatives Considered
+Supporting Mermaid diagram where appropriate
 
-[Alternatives description]
-[Rationale for rejection]
+## Comparison Table
+
+|                      | Option A  | Option B | Options C | Option D |
+|----------------------|-----------|----------|-----------|----------|
+| Decision dimension 1 | Rationale |          |           |          |
+| Decision dimension n | Rationale |          |           |          |
+| Summary              | Rationale |          |           |          |
+
+
+
+## Recommended Option
+
+Rationale
 
 ## Consequences
 
-[Consequences description]
-
-## Usage
-
-[Longer description of how to use this
+Consequences description
